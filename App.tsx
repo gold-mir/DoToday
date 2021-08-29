@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as TaskManager from 'expo-task-manager'
 import * as BackgroundFetch from 'expo-background-fetch'
 import * as Notifications from 'expo-notifications'
-import * as SQLite from 'expo-sqlite'
 import Checkbox from 'expo-checkbox'
 import TaskDB from './resources/TaskDB'
 import { Task } from './resources/task'
@@ -21,33 +20,11 @@ import MainScreen from './components/MainScreen'
 const db = TaskDB.getConnection()
 
 async function testDB() {
-  let dummyTasks: Task[] =[
-    {
-      name: "Cuddle Wife",
-      taskType: 'DoSoon',
-      date: new Date(Date.now())
-    },
-    {
-      name: "Kiss Wife",
-      taskType: 'FixedDate',
-      date: new Date(Date.now() + 1000*60*60*24)
-    },
-    {
-      name: "Squish Wife",
-      taskType: 'DoSoon',
-      date: new Date(Date.now())
-    }
-  ]
-
-  await db.addTask({name: "Hold Wife", taskType: "FixedDate", date: new Date(Date.now())})
-
-  dummyTasks.map(async (task) => {
-    await db.addTask(task)
-  })
-
   let tasks = await db.getAllTasks()
-  console.log(`have ${tasks.length} total tasks, with names ${tasks.map( task => task.name)}`)
+  console.log(`have ${tasks.length} total tasks, with names ${tasks.map( task => `${task.name}: ${task.completed}`)}`)
 }
+
+console.log('loaded!')
 
 // testDB()
 
@@ -68,12 +45,12 @@ function App (): JSX.Element | null {
       <Drawer.Navigator initialRouteName="Tasks" drawerContent={(props) => {
         let { descriptors, navigation, state } = props
         return(
-          <DrawerContentScrollView {...props} style={{flex: 1}}>
-            <View style={{borderStyle: 'solid', borderColor: 'black', borderWidth: 1, flexGrow: 1}}>
+          <DrawerContentScrollView {...props} contentContainerStyle={{flex: 1}}>
+            <View style={{flexGrow: 1}}>
               <DrawerItemList {...props}/>
             </View>
-            <View style={{flexBasis: 80, justifyContent: 'center', alignItems: 'center'}}>
-              <Text>I love my wife!</Text>
+            <View style={{flexBasis: 80}}>
+              <Text>Bottom Text</Text>
             </View>
           </DrawerContentScrollView>
         )
@@ -88,9 +65,11 @@ function App (): JSX.Element | null {
 function SecondScreen(): JSX.Element {
   return(
     <View style={styles.container}>
-      <Text>
-        This is a second screen.
-      </Text>
+      <View style={{...styles.pageContent, borderWidth: 1}}>
+        <Text>
+          This is a second screen.
+        </Text>
+      </View>
     </View>
   )
 }

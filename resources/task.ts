@@ -1,10 +1,10 @@
 export interface Task {
-    id?: number,
+    id: number,
     name: string,
     description?: string,
     // type: FixedDate | DoSoon,
     taskType: TaskTypes,
-    completed?: boolean,
+    completed: boolean,
     date: Date,
     timescale?: number,
     doBefore?: boolean
