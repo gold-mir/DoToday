@@ -12,56 +12,76 @@ import Checkbox from 'expo-checkbox'
 import TaskDB from './resources/TaskDB'
 import { Task } from './resources/task'
 
-import { NavigationContainer, useNavigation } from '@react-navigation/native'
+import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer'
 
-const db = TaskDB.init()
-db.then(async (db) => {
-  let dummyTask: Task = {
-    name: `Dummy Task ${Math.random()}`,
-    taskType: 'DoSoon',
-    date: new Date(Date.now()),
-    id: 0
-  }
-  let id = await db.addTask(dummyTask)
-  let task = await db.getTask(id)
-  console.log(task)
-})
+import MainScreen from './components/MainScreen'
 
-export type RootStackParamList = {
-  Home: undefined,
-  Second: undefined
+const db = TaskDB.getConnection()
+
+async function testDB() {
+  let dummyTasks: Task[] =[
+    {
+      name: "Cuddle Wife",
+      taskType: 'DoSoon',
+      date: new Date(Date.now())
+    },
+    {
+      name: "Kiss Wife",
+      taskType: 'FixedDate',
+      date: new Date(Date.now() + 1000*60*60*24)
+    },
+    {
+      name: "Squish Wife",
+      taskType: 'DoSoon',
+      date: new Date(Date.now())
+    }
+  ]
+
+  await db.addTask({name: "Hold Wife", taskType: "FixedDate", date: new Date(Date.now())})
+
+  dummyTasks.map(async (task) => {
+    await db.addTask(task)
+  })
+
+  let tasks = await db.getAllTasks()
+  console.log(`have ${tasks.length} total tasks, with names ${tasks.map( task => task.name)}`)
 }
 
-export type NavigatorProp = NativeStackNavigationProp<RootStackParamList>
+// testDB()
 
-const Stack = createNativeStackNavigator<RootStackParamList>()
+
+// export type RootStackParamList = {
+//   DoToday: undefined,
+//   Second: undefined
+// }
+
+// export type NavigatorProp = NativeStackNavigationProp<RootStackParamList>
+
+// const Stack = createNativeStackNavigator<RootStackParamList>()
+const Drawer = createDrawerNavigator()
 
 function App (): JSX.Element | null {
   return(
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Home" component={MainScreen}/>
-        <Stack.Screen name="Second" component={SecondScreen}/>
-      </Stack.Navigator>
+      <Drawer.Navigator initialRouteName="Tasks" drawerContent={(props) => {
+        let { descriptors, navigation, state } = props
+        return(
+          <DrawerContentScrollView {...props} style={{flex: 1}}>
+            <View style={{borderStyle: 'solid', borderColor: 'black', borderWidth: 1, flexGrow: 1}}>
+              <DrawerItemList {...props}/>
+            </View>
+            <View style={{flexBasis: 80, justifyContent: 'center', alignItems: 'center'}}>
+              <Text>I love my wife!</Text>
+            </View>
+          </DrawerContentScrollView>
+        )
+      }} >
+        <Drawer.Screen name="Tasks" component={MainScreen}/>
+        <Drawer.Screen name="Second" component={SecondScreen}/>
+      </Drawer.Navigator>
     </NavigationContainer>
-  )
-}
-
-function MainScreen(): JSX.Element {
-  const [checked, setChecked] = useState<boolean>(false)
-  const navigation = useNavigation<NavigatorProp>()
-
-  return(
-    <View style={styles.container}>
-      <View style={styles.checkboxContainer}>
-        <Text style={{textDecorationLine: `${checked? 'line-through' : 'none'}`,
-          color: `${checked? 'lightgrey' : 'black'}`}}>This is an example task!</Text>
-        <Checkbox value={checked} onValueChange={setChecked}/>
-      </View>
-      <Button title="Go to Second Page" onPress={() => navigation.navigate("Second")} />
-      <StatusBar style="auto"/>
-    </View>
   )
 }
 
@@ -89,7 +109,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 5
+    padding: 5,
+  },
+  pageContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  button: {
+    flexBasis: 50,
+    flexDirection: 'row',
+    alignItems: 'center'
   }
 })
 
