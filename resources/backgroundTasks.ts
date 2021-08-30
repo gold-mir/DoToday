@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import TaskDB from './TaskDB'
 import { generateDailyTasks, Task } from './task'
+import * as Permissions from 'expo-permissions'
 
 const BACKGROUND_DAILYTASK_GENERATOR = 'daily-task-generator'
 
@@ -37,8 +38,14 @@ export const StorageKeys = {
     return tomorrow
   }
 
-export function setupBackgroundTasks(){
-    // console.log('uwu')
+export async function setupBackgroundTasks(){
+
+    const { status } = await Permissions.askAsync(Permissions.NOTIFICATIONS)
+
+    if(status !== 'granted'){
+        return
+    }
+
     TaskManager.defineTask(BACKGROUND_DAILYTASK_GENERATOR, async () => {
         let currentTime: Date = new Date()
         let nextNewTaskDateString = await AsyncStorage.getItem(StorageKeys.nextNewListDate)
