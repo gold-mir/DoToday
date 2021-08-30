@@ -84,7 +84,7 @@ class TaskDB {
     async getAllTasks(): Promise<Task[]> {
         await this.init()
 
-        let query = `SELECT * FROM tasks`
+        let query = `SELECT * FROM tasks ORDER BY id`
         let result = await this.executeSQLAsync(query)
 
         let rows: taskRows[] = (result.rows as any)._array
@@ -96,7 +96,7 @@ class TaskDB {
     async getActiveTasks(): Promise<Task[]> {
         await this.init()
 
-        let query = `SELECT * FROM tasks WHERE completed != 1`
+        let query = `SELECT * FROM tasks WHERE completed != 1 ORDER BY id`
         let result = await this.executeSQLAsync(query)
 
         let rows: taskRows[] = (result.rows as any)._array

@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as TaskManager from 'expo-task-manager'
 import * as BackgroundFetch from 'expo-background-fetch'
 import * as Notifications from 'expo-notifications'
-import Checkbox from 'expo-checkbox'
 import TaskDB from './resources/TaskDB'
 import { Task, generateDailyTasks } from './resources/task'
 
@@ -20,49 +19,91 @@ import TaskEntryScreen from './components/TaskEntryScreen'
 import TaskManagerScreen from './components/TaskManagerScreen'
 
 const db = TaskDB.getConnection()
+const Drawer = createDrawerNavigator()
 
-async function testDB() {
-  let tasks = await db.getAllTasks()
-  console.log(`have ${tasks.length} total tasks, with names ${tasks.map( task => `${task.name}: ${task.completed}`)}`)
+export const StorageKeys = {
+  dailyTasks: 'daily-tasks',
+  nextNewListDate: 'next-date'
 }
 
-console.log('loaded!')
+interface State {
+  tasks: Task[]
+  dailyTasks: Task[]
+}
 
-// testDB()
+async function storeNewDailyTasks(tasks: Task[]): Promise<number[]> {
+  let ids: number[] = []
+  ids = tasks.map((task) => task.id)
+  await AsyncStorage.setItem(StorageKeys.dailyTasks, JSON.stringify(ids))
+  return ids
+}
 
+function getDailyTasksFromList(tasks: Task[], ids: number[]): Task[]{
+  ids.sort((a, b) => a - b)
+  let currentIndex: number = 0
+  let output: Task[] = []
+  for(let id of ids){
+    while(tasks[currentIndex].id !== id) {
+      currentIndex++
+    }
+    output.push(tasks[currentIndex])
+  }
 
-// export type RootStackParamList = {
-//   DoToday: undefined,
-//   Second: undefined
-// }
+  return output
+}
 
-// export type NavigatorProp = NativeStackNavigationProp<RootStackParamList>
-
-// const Stack = createNativeStackNavigator<RootStackParamList>()
-const Drawer = createDrawerNavigator()
+function getTomorrow(today: Date){
+  let tomorrow = new Date(today)
+  tomorrow.setHours(0,0,0,0)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow
+}
 
 function App (): JSX.Element | null {
 
   const [taskEntryVisible, setTaskEntryVisible] = useState<boolean>(false)
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [dailyTasks, setDailyTasks] = useState<Task[]>([])
+  const [state, setState] = useState<State>({tasks: [], dailyTasks: []})
 
   const loadTasks = async () => {
     let tasks: Task[] = await db.getAllTasks()
-    setTasks(tasks)
-    setDailyTasks(generateDailyTasks(tasks, 5))
+
+    let dailyTasks: Task[] = []
+    let lastDateString = await AsyncStorage.getItem(StorageKeys.nextNewListDate)
+    let dailyTasksString = await AsyncStorage.getItem(StorageKeys.dailyTasks)
+
+    let lastDate: Date = lastDateString? JSON.parse(lastDateString) : null
+    let dailyTaskIds: number[] = dailyTasksString? JSON.parse(dailyTasksString) : null
+    
+    let now = new Date()
+    console.log(dailyTaskIds)
+
+    if(!dailyTaskIds || !lastDate || lastDate < now) {
+      console.log(`Don't have daily tasks for ${now}, generating`)
+      dailyTasks = generateDailyTasks(tasks, 5)
+      storeNewDailyTasks(dailyTasks)
+      AsyncStorage.setItem(StorageKeys.nextNewListDate, JSON.stringify(getTomorrow(now)))
+    } else {
+      console.log('have daily tasks, getting')
+      dailyTasks = getDailyTasksFromList(tasks, dailyTaskIds)
+    }
+
+    setState({tasks: tasks, dailyTasks: dailyTasks})
   }
 
   const updateTask = async (task: Task) => {
     let newTask = {...task}
-    let newTasks = tasks.map(oldTask => oldTask.id === newTask.id ? newTask : oldTask)
+    let newTasks = state.tasks.map(oldTask => oldTask.id === newTask.id ? newTask : oldTask)
+    let newDailyTasks = state.dailyTasks.map(oldTask => oldTask.id === newTask.id ? newTask : oldTask)
     await db.updateTask(newTask)
-    setTasks(newTasks)
+    setState({
+      tasks: newTasks,
+      dailyTasks: newDailyTasks
+    })
   }
 
   const addTask = async (task: Task) => {
     await db.addTask(task)
-    setTasks([...tasks, task])
+    setState({...state, tasks: [...state.tasks, task]})
   }
 
   useEffect(() => {
@@ -91,25 +132,13 @@ function App (): JSX.Element | null {
         )
       }} >
         <Drawer.Screen name="Tasks" options={{title: "Today's Tasks"}}>
-          {() => (<TaskListScreen tasks={dailyTasks} updateTask={updateTask}/>)}
+          {() => (<TaskListScreen tasks={state.dailyTasks} updateTask={updateTask}/>)}
         </Drawer.Screen>
         <Drawer.Screen name="Manage" options={{title: "Manage Tasks"}}>
-          {() => (<TaskManagerScreen tasks={tasks} updateTask={(updateTask)} deleteTask={()=>null}/>)}
+          {() => (<TaskManagerScreen tasks={state.tasks} updateTask={(updateTask)} deleteTask={()=>null}/>)}
         </Drawer.Screen>
       </Drawer.Navigator>
     </NavigationContainer>
-  )
-}
-
-function SecondScreen(): JSX.Element {
-  return(
-    <View style={styles.container}>
-      <View style={{...styles.pageContent, borderWidth: 1}}>
-        <Text>
-          This is a second screen.
-        </Text>
-      </View>
-    </View>
   )
 }
 

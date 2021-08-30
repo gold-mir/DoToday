@@ -37,7 +37,6 @@ function TaskEntryScreen(props: Props): JSX.Element {
     }
 
     const onSubmit = () => {
-
         if(name === '') {
             return
         }
