@@ -148,33 +148,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkboxContainer: {
-    borderColor: 'black',
-    borderStyle: 'solid',
-    borderRadius: 10,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 5,
-  },
-  pageContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  button: {
-    flexBasis: 50,
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)'
   }
 })
 
