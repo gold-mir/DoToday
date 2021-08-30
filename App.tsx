@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar'
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { StyleSheet, Text, View, TextInput, Button } from 'react-native'
+import { StyleSheet, Text, View, Modal, Button, TouchableOpacity, TouchableWithoutFeedback } from 'react-native'
 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as TaskManager from 'expo-task-manager'
@@ -9,13 +9,15 @@ import * as BackgroundFetch from 'expo-background-fetch'
 import * as Notifications from 'expo-notifications'
 import Checkbox from 'expo-checkbox'
 import TaskDB from './resources/TaskDB'
-import { Task } from './resources/task'
+import { Task, generateDailyTasks } from './resources/task'
 
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer'
 
-import MainScreen from './components/MainScreen'
+import TaskListScreen from './components/TaskListScreen'
+import TaskEntryScreen from './components/TaskEntryScreen'
+import TaskManagerScreen from './components/TaskManagerScreen'
 
 const db = TaskDB.getConnection()
 
@@ -40,8 +42,38 @@ console.log('loaded!')
 const Drawer = createDrawerNavigator()
 
 function App (): JSX.Element | null {
+
+  const [taskEntryVisible, setTaskEntryVisible] = useState<boolean>(false)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [dailyTasks, setDailyTasks] = useState<Task[]>([])
+
+  const loadTasks = async () => {
+    let tasks: Task[] = await db.getAllTasks()
+    setTasks(tasks)
+    setDailyTasks(generateDailyTasks(tasks, 5))
+  }
+
+  const updateTask = async (task: Task) => {
+    let newTask = {...task}
+    let newTasks = tasks.map(oldTask => oldTask.id === newTask.id ? newTask : oldTask)
+    await db.updateTask(newTask)
+    setTasks(newTasks)
+  }
+
+  const addTask = async (task: Task) => {
+    await db.addTask(task)
+    setTasks([...tasks, task])
+  }
+
+  useEffect(() => {
+    loadTasks()
+  }, [])
+
   return(
     <NavigationContainer>
+
+      <TaskEntryScreen visible={taskEntryVisible} submit={addTask} dismiss={() => setTaskEntryVisible(false)} />
+      
       <Drawer.Navigator initialRouteName="Tasks" drawerContent={(props) => {
         let { descriptors, navigation, state } = props
         return(
@@ -50,13 +82,20 @@ function App (): JSX.Element | null {
               <DrawerItemList {...props}/>
             </View>
             <View style={{flexBasis: 80}}>
-              <Text>Bottom Text</Text>
+              <Button title='Add Task' onPress={() => {
+                navigation.closeDrawer()
+                setTaskEntryVisible(true)
+              }}/>
             </View>
           </DrawerContentScrollView>
         )
       }} >
-        <Drawer.Screen name="Tasks" component={MainScreen}/>
-        <Drawer.Screen name="Second" component={SecondScreen}/>
+        <Drawer.Screen name="Tasks" options={{title: "Today's Tasks"}}>
+          {() => (<TaskListScreen tasks={dailyTasks} updateTask={updateTask}/>)}
+        </Drawer.Screen>
+        <Drawer.Screen name="Manage" options={{title: "Manage Tasks"}}>
+          {() => (<TaskManagerScreen tasks={tasks} updateTask={(updateTask)} deleteTask={()=>null}/>)}
+        </Drawer.Screen>
       </Drawer.Navigator>
     </NavigationContainer>
   )
@@ -99,6 +138,14 @@ const styles = StyleSheet.create({
     flexBasis: 50,
     flexDirection: 'row',
     alignItems: 'center'
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)'
   }
 })
 

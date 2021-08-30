@@ -93,6 +93,18 @@ class TaskDB {
         return tasks
     }
 
+    async getActiveTasks(): Promise<Task[]> {
+        await this.init()
+
+        let query = `SELECT * FROM tasks WHERE completed != 1`
+        let result = await this.executeSQLAsync(query)
+
+        let rows: taskRows[] = (result.rows as any)._array
+        let tasks: Task[] = rows.map((row) => buildTask(row))
+
+        return tasks
+    }
+
     async updateTask(task: Task): Promise<boolean>{
         await this.init()
         //(name, type, date, description, doBefore, timescale, completed)
@@ -118,7 +130,14 @@ class TaskDB {
         return result.rowsAffected === 1
     }
 
-    async executeSQLAsync(sql: string, params: any[] = []): Promise<SQLResultSet> {
+    async deleteTask(id: number): Promise<boolean> {
+        let query = `DELETE FROM tasks WHERE id = ${id}`
+        let result = await this.executeSQLAsync(query)
+
+        return result.rowsAffected === 1
+    }
+
+    private async executeSQLAsync(sql: string, params: any[] = []): Promise<SQLResultSet> {
         return new Promise((resolve, reject) => {
             // console.log('im a promise')
             this.db.transaction((tx) => {

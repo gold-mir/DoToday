@@ -8,29 +8,18 @@ import Checkbox from 'expo-checkbox'
 
 const db = TaskDB.getConnection()
 
-function MainScreen(): JSX.Element {
+interface Props {
+    tasks: Task[]
+    updateTask: (task: Task) => void
+}
 
-    const [tasks, setTasks] = useState<Task[]>([])
-
-    const updateTask = (newTask: Task) => {
-        let newTasks = tasks.map(oldTask => oldTask.id === newTask.id ? newTask : oldTask)
-        setTasks(newTasks)
-    }
-
-    const loadTasks = async () => {
-        let tasks: Task[] = await db.getAllTasks()
-        setTasks(tasks)
-    }
+function TaskListScreen(props: Props): JSX.Element {
+    let { tasks, updateTask } = props
 
     const setTaskCompletion = async (task: Task, completion: boolean) => {
         let newTask = {...task, completed: completion}
         updateTask(newTask)
-        db.updateTask(newTask)
     }
-
-    useEffect(() => {
-        loadTasks()
-    }, [])
 
     return(
         <View style={{...styles.container}}>
@@ -75,4 +64,4 @@ const styles = StyleSheet.create({
   }
 })
 
-export default MainScreen
+export default TaskListScreen
